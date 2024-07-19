@@ -12,7 +12,7 @@ spec:
         name: http
         protocol: HTTP
       hosts:
-        - {{ .Values.gateway.hostname }}
+        - "*"
       tls:
         httpsRedirect: {{ .Values.gateway.httpsRedirect }}
     {{- if .Values.gateway.tls.enabled }}
@@ -21,7 +21,7 @@ spec:
         name: https
         protocol: HTTPS
       hosts:
-        - {{ .Values.gateway.hostname }}
+        - "*"
       tls:
         mode: SIMPLE
         credentialName: {{ .Values.gateway.tls.secretName }}

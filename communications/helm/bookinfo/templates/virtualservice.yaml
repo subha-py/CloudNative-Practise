@@ -5,7 +5,7 @@ metadata:
   name: bookinfo
 spec:
   hosts:
-  - {{ .Values.gateway.hostname }}
+  - "*"
   gateways:
   - bookinfo
   http:
