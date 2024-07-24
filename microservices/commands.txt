@@ -1299,4 +1299,261 @@ $ kubectl label namespace default istio-injection-
 namespace/default labeled
 
 >>
-Finished !!
+
+Step 1. Prepare environment (Start Docker Desktop, minikube k8s cluster and helm)
+----
+Prerequisites:
+minikube installed. 
+kubectl command-line tool.
+Helm v3 installed.
+
+>1
+Start Docker Desktop
+
+>2
+Start minikube
+
+minikube start
+
+>3
+Check K8s
+
+kubectl get all
+
+>4
+Check helm
+
+helm
+helm list
+helm repo list
+
+
+Step 2. Setup and Install Prometheus
+----
+>
+Add Helm Repositories:
+To get the latest Helm charts for Prometheus and Grafana, you need to add their repositories.
+
+>
+goto Prometheus ArtifactHub Helm Repository:
+https://artifacthub.io/packages/helm/prometheus-community/prometheus
+
+>
+Examine the helm repository on ArtifactHub
+Install commands, values yamls..
+
+>
+Add the Prometheus Helm repo
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+
+Update Helm repos to fetch the latest charts
+helm repo update
+
+>
+Check helm repos
+helm repo list
+
+>
+Create Monitoring Namespace:
+This namespace will hold all our monitoring components.
+
+kubectl create namespace monitoring
+
+>
+Install Prometheus:
+Deploy Prometheus into the monitoring namespace.
+
+helm install prometheus prometheus-community/prometheus --namespace monitoring
+
+Wait for a couple of minutes to let Prometheus components deploy and start.
+
+>
+Check Kubernetes
+kubectl get all -n monitoring
+
+
+Step 3. Access Prometheus Dashboard
+----
+>
+See K8s Services:
+kubectl get svc -n monitoring
+
+NAME                                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+prometheus-alertmanager               ClusterIP   10.101.254.6     <none>        9093/TCP   11m
+prometheus-alertmanager-headless      ClusterIP   None             <none>        9093/TCP   11m
+prometheus-kube-state-metrics         ClusterIP   10.97.118.91     <none>        8080/TCP   11m
+prometheus-prometheus-node-exporter   ClusterIP   10.103.244.211   <none>        9100/TCP   11m
+prometheus-prometheus-pushgateway     ClusterIP   10.110.232.46    <none>        9091/TCP   11m
+prometheus-server                     ClusterIP   10.99.166.109    <none>        80/TCP     11m
+
+>
+Expose port-forward to prometheus-server
+
+minikube service prometheus-server -n monitoring
+
+>
+Examine Prometheus Dashboard
+Graph
+Alerts
+Configuration
+Rules
+Targets
+Service Discovery
+
+goto Graph
+	search for "node"..
+		node_cpu_seconds_total
+		node_disk_discard_time_seconds_total
+        
+>
+Prometheus metrics
+http://127.0.0.1:60663/metrics
+
+See different type of metrics: gauge, counter..
+
+# HELP go_memstats_alloc_bytes Number of bytes allocated and still in use.
+# TYPE go_memstats_alloc_bytes gauge
+go_memstats_alloc_bytes 8.98326e+07
+# HELP go_memstats_alloc_bytes_total Total number of bytes allocated, even if freed.
+# TYPE go_memstats_alloc_bytes_total counter
+go_memstats_alloc_bytes_total 7.12498864e+08
+# HELP go_memstats_buck_hash_sys_bytes Number of bytes used by the profiling bucket hash table.
+# TYPE go_memstats_buck_hash_sys_bytes gauge
+go_memstats_buck_hash_sys_bytes 1.542932e+06
+# HELP go_memstats_frees_total Total number of frees.
+# TYPE go_memstats_frees_total counter
+go_memstats_frees_total 1.390623e+06
+
+Step 4. Setup and Install Grafana
+----
+>
+Add Helm Repositories:
+To get the latest Helm charts for Prometheus and Grafana, you need to add their repositories.
+
+>
+goto Grafana ArtifactHub Helm Repository:
+https://artifacthub.io/packages/helm/grafana/grafana
+
+>
+Examine the helm repository on ArtifactHub
+Install commands, values yamls..
+
+>
+Add the Grafana Helm repo
+helm repo add grafana https://grafana.github.io/helm-charts
+
+Update Helm repos to fetch the latest charts
+helm repo update
+
+>
+Check helm repos
+helm repo list
+
+>
+Install Grafana:
+Deploy Grafana into the monitoring namespace.
+
+helm install grafana grafana/grafana --namespace monitoring
+
+Wait for a couple of minutes to let Prometheus components deploy and start.
+
+>
+Check Kubernetes
+kubectl get all -n monitoring
+
+Step 5. Access Grafana Dashboard
+----
+>
+See K8s Services:
+kubectl get svc -n monitoring
+
+NAME                                  TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+grafana                               ClusterIP   10.106.219.248   <none>        80/TCP     10m
+prometheus-alertmanager               ClusterIP   10.101.254.6     <none>        9093/TCP   11m
+prometheus-alertmanager-headless      ClusterIP   None             <none>        9093/TCP   11m
+prometheus-kube-state-metrics         ClusterIP   10.97.118.91     <none>        8080/TCP   11m
+prometheus-prometheus-node-exporter   ClusterIP   10.103.244.211   <none>        9100/TCP   11m
+prometheus-prometheus-pushgateway     ClusterIP   10.110.232.46    <none>        9091/TCP   11m
+prometheus-server                     ClusterIP   10.99.166.109    <none>        80/TCP     11m
+
+>
+Access Grafana Dashboard:
+You can use minikube to easily open the Grafana dashboard.
+Expose port-forward to grafana
+
+minikube service grafana -n monitoring
+
+This will open Grafana in your default web browser. 
+Use the credentials obtained in the next step to log in.
+
+>
+To retrieve your Grafana login credentials:
+Open Bash Command window:
+
+echo "User: admin"
+echo "Password: $(kubectl get secret --namespace monitoring grafana -o jsonpath="{.data.admin-password}" | base64 --decode)"
+
+>
+Examine Grafana Dashboard
+Step 6. Add Grafana Datasource for Prometheus Server
+----
+>
+Make sure that prometheus is running on your k8s cluster
+
+>
+Make sure that grafana dashboard is port-forwarded:
+
+kubectl get svc -n monitoring
+minikube service grafana -n monitoring
+
+>
+Connect Grafana to Prometheus:
+After logging into Grafana, 
+  click on the gear icon ⚙️ on the left side to navigate to the Configuration menu.
+
+Click on Data Sources.
+
+Click Add data source and choose Prometheus.
+
+In the HTTP section, 
+ set the URL:
+    http://prometheus-server.monitoring.svc.cluster.local
+ or you can give minikube address of Prometheus
+    http://127.0.0.1:60663/
+
+Click Save & Test.
+
+>
+Examine Grafana
+
+goto Connections
+    Data Sources
+        see Prometheus
+
+Step 7. Create Kubernetes Cluster Dashboard on Grafana
+----
+>
+Import Kubernetes Monitoring Dashboards:
+Go to the Grafana dashboards page 
+https://grafana.com/grafana/dashboards/
+
+>
+Find a Kubernetes monitoring dashboard (e.g., "Kubernetes Cluster"). 
+Copy ID to clipboard. Note the dashboard ID. 
+Back in Grafana, click on the + sign on the left, choose Import, enter the dashboard ID, and follow the prompts.
+
+Kubernetes Cluster (Prometheus)
+https://grafana.com/grafana/dashboards/6417-kubernetes-cluster-prometheus/
+
+Summary metrics about containers running on Kubernetes nodes. 
+
+Another Option:
+Search for: Kubernetes cluster
+Kubernetes cluster monitoring (via Prometheus)
+https://grafana.com/grafana/dashboards/315-kubernetes-cluster-monitoring-via-prometheus/
+>
+Observe Metrics:
+Navigate around the imported dashboard. 
+You should see metrics related to your Minikube node, pods, deployments, and other Kubernetes components.
+
+Monitors Kubernetes cluster using Prometheus. Shows overall cluster CPU / Memory / Filesystem usage as well as individual pod, containers, systemd services statistics. 
